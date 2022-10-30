@@ -32,7 +32,10 @@ struct RemoveCommand {
 }
 
 fn handle_add_command(alias_to_add: AddCommand, alias_file: &mut File) {
-    let string_to_append = format!("alias {}=\'{}\'\n", alias_to_add.alias, alias_to_add.command);
+    let string_to_append = format!(
+        "alias {}=\'{}\'\n",
+        alias_to_add.alias, alias_to_add.command
+    );
     alias_file.write_all(string_to_append.as_bytes()).unwrap();
 }
 
@@ -66,7 +69,7 @@ fn main() {
         match cli.command {
             Commands::Add(alias_to_add) => handle_add_command(alias_to_add, &mut alias_file),
             Commands::Remove(alias_to_remove) => {
-                println!("Alias to remove: {}", alias_to_remove.alias)
+                unimplemented!("Alias to remove: {}", alias_to_remove.alias)
             }
         }
     } else {

@@ -1,4 +1,8 @@
-use std::{fs::File, io::Write, path::Path};
+use std::{
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Seek, Write},
+    path::Path,
+};
 
 use clap::{Args, Parser, Subcommand};
 use directories::UserDirs;
@@ -31,48 +35,110 @@ struct RemoveCommand {
     alias: String,
 }
 
-fn handle_add_command(alias_to_add: AddCommand, alias_file: &mut File) {
-    let string_to_append = format!(
-        "alias {}=\'{}\'\n",
-        alias_to_add.alias, alias_to_add.command
-    );
-    alias_file.write_all(string_to_append.as_bytes()).unwrap();
+enum AliasmanagerFilePermissions {
+    Append,
+    Write,
 }
 
-fn get_or_create_aliasmanager_file() -> Result<File, std::io::Error> {
-    if let Some(user_dirs) = UserDirs::new() {
-        let alias_file_path = Path::new(user_dirs.home_dir()).join("./.aliasmanager.sh");
-
-        if Path::exists(alias_file_path.as_path()) {
-            File::options()
-                .append(true)
-                .read(true)
-                .open(alias_file_path)
-        } else {
-            File::options()
-                .append(true)
-                .create(true)
-                .read(true)
-                .open(alias_file_path)
+fn handle_remove_command(
+    alias_to_remove: RemoveCommand,
+    alias_file_path: &Path,
+) -> Result<(), String> {
+    if let Ok(mut alias_file) =
+        open_file_with_permissions(alias_file_path, &AliasmanagerFilePermissions::Write)
+    {
+        let alias_file_reader = BufReader::new(alias_file.by_ref());
+        let mut content_to_write = String::new();
+        let pattern_to_match = format!("alias {}=", alias_to_remove.alias);
+        for (index, line) in alias_file_reader.lines().enumerate() {
+            if let Ok(line_content) = line {
+                println!("{}", line_content);
+                if !line_content.starts_with(&pattern_to_match) {
+                    if index == 0 {
+                        content_to_write = format!("{}", line_content);
+                    } else {
+                        content_to_write = format!("{}\n{}", content_to_write, line_content);
+                    }
+                }
+            } else {
+                panic!("Couldn't read aliases from the alias file (~/.aliasmanagerrc)");
+            }
         }
+        println!("{}", content_to_write);
+        alias_file.set_len(0).unwrap();
+        alias_file.seek(std::io::SeekFrom::Start(0)).unwrap();
+        alias_file
+            .write_all(content_to_write.as_bytes())
+            .map_err(|err| {
+                format!(
+                    "Couldn't write new content after removal, underlying error is: \n{}",
+                    err
+                )
+            })
     } else {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Couldn't determine the user's home directory",
+        Err(String::from(
+            "Couldn't load aliasmanager file to remove aliases",
         ))
     }
 }
 
+fn handle_add_command(alias_to_add: AddCommand, alias_file_path: &Path) -> Result<(), String> {
+    if let Ok(mut alias_file) =
+        open_file_with_permissions(alias_file_path, &AliasmanagerFilePermissions::Append)
+    {
+        let string_to_append = format!(
+            "alias {}=\'{}\'\n",
+            alias_to_add.alias, alias_to_add.command
+        );
+        alias_file
+            .write_all(string_to_append.as_bytes())
+            .map_err(|err| {
+                format!(
+                    "Couldn't append new alias to file, underlying error is: \n{}",
+                    err
+                )
+            })
+    } else {
+        Err(String::from(
+            "Couldn't load aliasmanager file to append alias",
+        ))
+    }
+}
+
+fn open_file_with_permissions(
+    path: &Path,
+    permissions: &AliasmanagerFilePermissions,
+) -> Result<File, String> {
+    let mut opener = OpenOptions::new();
+    opener.read(true);
+    if !path.exists() {
+        opener.create(true);
+    }
+    match permissions {
+        AliasmanagerFilePermissions::Append => opener.append(true),
+        AliasmanagerFilePermissions::Write => opener.write(true),
+    };
+    opener
+        .open(path)
+        .map_err(|err| format!("Couldn't open file with underlying error: \n{}", err))
+}
+
 fn main() {
     let cli = CLI::parse();
-    if let Ok(mut alias_file) = get_or_create_aliasmanager_file() {
-        match cli.command {
-            Commands::Add(alias_to_add) => handle_add_command(alias_to_add, &mut alias_file),
-            Commands::Remove(alias_to_remove) => {
-                unimplemented!("Alias to remove: {}", alias_to_remove.alias)
+    if let Some(user_dirs) = UserDirs::new() {
+        let aliasmanager_file_path = Path::new(user_dirs.home_dir()).join("./.aliasmanagerrc");
+        let result = match cli.command {
+            Commands::Add(alias_to_add) => {
+                handle_add_command(alias_to_add, &aliasmanager_file_path)
             }
-        }
+            Commands::Remove(alias_to_remove) => {
+                handle_remove_command(alias_to_remove, &aliasmanager_file_path)
+            }
+        };
+        result
+            .map_err(|err| panic!("Something went wrong, here's the log:\n{}", err))
+            .unwrap();
     } else {
-        panic!("Something went wrong when trying to load / create Aliasmanager files, here's the underlying error \n")
+        panic!("Couldn't determine the user's home directory")
     }
 }

@@ -45,7 +45,7 @@ fn handle_remove_command(
     alias_file_path: &Path,
 ) -> Result<(), String> {
     if let Ok(mut alias_file) =
-        open_file_with_permissions(alias_file_path, &AliasmanagerFilePermissions::Write)
+        open_file_with_permissions(alias_file_path, AliasmanagerFilePermissions::Write)
     {
         let alias_file_reader = BufReader::new(alias_file.by_ref());
         let mut content_to_write = String::new();
@@ -84,7 +84,7 @@ fn handle_remove_command(
 
 fn handle_add_command(alias_to_add: AddCommand, alias_file_path: &Path) -> Result<(), String> {
     if let Ok(mut alias_file) =
-        open_file_with_permissions(alias_file_path, &AliasmanagerFilePermissions::Append)
+        open_file_with_permissions(alias_file_path, AliasmanagerFilePermissions::Append)
     {
         let string_to_append = format!(
             "alias {}=\'{}\'\n",
@@ -107,7 +107,7 @@ fn handle_add_command(alias_to_add: AddCommand, alias_file_path: &Path) -> Resul
 
 fn open_file_with_permissions(
     path: &Path,
-    permissions: &AliasmanagerFilePermissions,
+    permissions: AliasmanagerFilePermissions,
 ) -> Result<File, String> {
     let mut opener = OpenOptions::new();
     opener.read(true);

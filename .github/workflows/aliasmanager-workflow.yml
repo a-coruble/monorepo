@@ -1,0 +1,22 @@
+name: Aliasmanager CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.2.4
+      - name: Set Nx git references
+        uses: nrwl/nx-set-shas@v3
+      - name: Install dependencies
+        run: pnpm ci
+      - run: pnpm nx affected --target=build --parallel=3

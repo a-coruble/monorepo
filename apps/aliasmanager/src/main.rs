@@ -19,6 +19,8 @@ enum Commands {
     Add(AddCommand),
     /// Remove an existing alias from the current user aliases
     Remove(RemoveCommand),
+    /// List all aliases created using aliasmanager
+    List,
 }
 
 #[derive(Args, Debug)]
@@ -37,8 +39,11 @@ struct RemoveCommand {
 
 enum AliasmanagerFilePermissions {
     Append,
+    Read,
     Write,
 }
+
+const CONFIGURATION_FILE_NAME: &str = ".aliasmanagerrc";
 
 fn handle_remove_command(
     alias_to_remove: RemoveCommand,
@@ -105,6 +110,22 @@ fn handle_add_command(alias_to_add: AddCommand, alias_file_path: &Path) -> Resul
     }
 }
 
+fn handle_list_command(alias_file_path: &Path) -> Result<(), String> {
+    if let Ok(alias_file) =
+        open_file_with_permissions(alias_file_path, AliasmanagerFilePermissions::Read)
+    {
+        let file_reader = BufReader::new(alias_file);
+        for line in file_reader.lines() {
+            println!("{}", line.unwrap_or("<empty_line>".to_owned()));
+        }
+        Ok(())
+    } else {
+        Err(String::from(
+            "Couldn't open .aliasmanagerrc file to list aliases",
+        ))
+    }
+}
+
 fn open_file_with_permissions(
     path: &Path,
     permissions: AliasmanagerFilePermissions,
@@ -116,6 +137,7 @@ fn open_file_with_permissions(
     }
     match permissions {
         AliasmanagerFilePermissions::Append => opener.append(true),
+        AliasmanagerFilePermissions::Read => opener.read(true),
         AliasmanagerFilePermissions::Write => opener.write(true),
     };
     opener
@@ -126,11 +148,12 @@ fn open_file_with_permissions(
 fn main() {
     let cli = CLI::parse();
     if let Some(user_dirs) = UserDirs::new() {
-        let aliasmanager_file_path = Path::new(user_dirs.home_dir()).join("./.aliasmanagerrc");
+        let aliasmanager_file_path = Path::new(user_dirs.home_dir()).join(CONFIGURATION_FILE_NAME);
         let result = match cli.command {
             Commands::Add(alias_to_add) => {
                 handle_add_command(alias_to_add, &aliasmanager_file_path)
             }
+            Commands::List => handle_list_command(&aliasmanager_file_path),
             Commands::Remove(alias_to_remove) => {
                 handle_remove_command(alias_to_remove, &aliasmanager_file_path)
             }

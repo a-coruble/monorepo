@@ -5,7 +5,9 @@ use std::{
 
 use crate::{
     cli_parser::{AddCommand, Commands, RemoveCommand},
-    config_file_manager::{open_file_with_permissions, AliasmanagerFilePermissions},
+    config_file_manager::{
+        open_file_with_permissions, AliasmanagerFilePermissions, CONFIGURATION_FILE_NAME,
+    },
 };
 
 fn handle_add_command(alias_to_add: AddCommand, alias_file_path: &Path) -> Result<(), String> {
@@ -25,9 +27,10 @@ fn handle_add_command(alias_to_add: AddCommand, alias_file_path: &Path) -> Resul
                 )
             })
     } else {
-        Err(String::from(
-            "Couldn't load aliasmanager file to append alias",
-        ))
+        Err(String::from(format!(
+            "Couldn't open {} file to list aliases",
+            alias_file_path.to_str().unwrap_or(CONFIGURATION_FILE_NAME),
+        )))
     }
 }
 
@@ -41,9 +44,10 @@ fn handle_list_command(alias_file_path: &Path) -> Result<(), String> {
         }
         Ok(())
     } else {
-        Err(String::from(
-            "Couldn't open .aliasmanagerrc file to list aliases",
-        ))
+        Err(String::from(format!(
+            "Couldn't open {} file to list aliases",
+            alias_file_path.to_str().unwrap_or(CONFIGURATION_FILE_NAME),
+        )))
     }
 }
 
@@ -83,9 +87,10 @@ fn handle_remove_command(
                 )
             })
     } else {
-        Err(String::from(
-            "Couldn't load aliasmanager file to remove aliases",
-        ))
+        Err(String::from(format!(
+            "Couldn't open {} file to list aliases",
+            alias_file_path.to_str().unwrap_or(CONFIGURATION_FILE_NAME),
+        )))
     }
 }
 

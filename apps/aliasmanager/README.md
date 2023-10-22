@@ -4,10 +4,11 @@ Aliasmanager is a small CLI utility to quickly add or remove some shell aliases.
 
 ## Usage
 
-There are 2 available commands for now:
+There are 3 available commands for now:
 
-- `aliasmanager add <alias> <command>`: adds a new alias to `~/.aliasmanager.sh`
+- `aliasmanager add <alias> <command>`: adds a new alias to `~/.aliasmanagerrc`
 - `aliasmanager remove <alias>`: removes the given alias
+- `aliasmanager list`: shows all aliases defined in `~/.aliasmanagerrc
 
 ## Installation from source
 
